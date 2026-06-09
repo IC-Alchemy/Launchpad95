@@ -4,7 +4,7 @@ These scripts are modified version of Ableton Live 9.0 scripts for Novation Laun
 
 It does not require any external tool like Max for Live (M4L) in order to work. This script is just a plain Live Control Surface Python Script. 
 
-Full manual for the new polymetric sequencer mode: [PolymetricSequencerMode.md](/z:/Code/DSP/LaunchpadAlchemy95/PolymetricSequencerMode.md)
+Full manual for the new polymetric sequencer mode: [PolymetricSequencerMode.md](PolymetricSequencerMode.md)
 
 ## Polymetric Sequencer Mode
 
