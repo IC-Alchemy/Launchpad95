@@ -230,5 +230,4 @@ If you rename the clip manually, keep the `[poly:...]` token if you want the lan
 
 - Start with all lane lengths equal, then change one lane at a time.
 - Short gate cycles against longer pitch cycles produce the clearest polymetric effect.
-- Use mono mode for basslines and poly mode for chords.
 - Because the clip contains ordinary MIDI notes, you can still inspect and edit the result in Ableton's piano roll.
