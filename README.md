@@ -35,5 +35,5 @@ Why it is useful:
 - Use ordinary MIDI clips that still open and edit normally in Live's piano roll.
 - Save lane lengths directly in the clip name with a token like `[poly:g8,p7,o5,v8,l3]`.
 
-See `PolymetricSequencerMode.md` for the full manual.
+See [PolymetricSequencerMode.md](/z:/Code/DSP/LaunchpadAlchemy95/PolymetricSequencerMode.md) for the full manual.
 
