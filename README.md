@@ -1,14 +1,20 @@
-Launchpad95 : Improved Novation Launchpad remote scripts with Instrument Mode, Scales, Step Sequencer and Device Controller.
+Original LaunchPad95 manual/ website https://motscousus.com/stuff/2011-07_Novation_Launchpad_Ableton_Live_Scripts/
 
-These scripts are modified version of Ableton Live 9.0 scripts for Novation Launchpad and provide the same functionality but add support for editing the midi clips using a step sequencer and Device Controller. It also replaces User Mode one with an Instrument Mode mimicking Ableton Push Instrument Mode behaviour.
+#### This fork just adds a new `User 2` sub-mode: `polymetric stepseq`.
 
-It does not require any external tool like Max for Live (M4L) in order to work. This script is just a plain Live Control Surface Python Script. 
+The new sequencer mode is fully working, but only tested on a Launchpad X on Windows.
+For more detailed install instructions check the original website above.
+
+
+## Simple Install Instructions
+Download this repo as a zip, and unzip the folder to <img width="667" height="24" alt="image" src="https://github.com/user-attachments/assets/6e3eadcd-1f0e-4371-b874-640dec8913f2" />
+
+You should have a folder Launchpad95PolyMetric along with all the other MIDI remote scripts. 
+Then simply select Launchpad95PolyMetric under Control Surface, and choose LPX MIDI Port 2 for in and out if using LPX
 
 Full manual for the new polymetric sequencer mode: [PolymetricSequencerMode.md](PolymetricSequencerMode.md)
 
 ## Polymetric Sequencer Mode
-
-#### This fork adds a new `User 2` sub-mode: `polymetric stepseq`.
 
 It is a clip-based melodic sequencer where five independent lanes can run at different cycle lengths:
 
