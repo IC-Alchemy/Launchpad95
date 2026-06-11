@@ -11,6 +11,7 @@ from .SubSelectorComponent import SubSelectorComponent  # noqa
 from .StepSequencerComponent import StepSequencerComponent
 from .StepSequencerComponent2 import StepSequencerComponent2
 from .PolymetricSequencerComponent import PolymetricSequencerComponent
+from .LoopingClipModeComponent import LoopingClipModeComponent
 from .NoteRepeatComponent import NoteRepeatComponent
 from _Framework.SceneComponent import SceneComponent
 from .SpecialProSessionComponent import SpecialProSessionComponent
@@ -104,6 +105,10 @@ class MainSelectorComponent(ModeSelectorComponent):
 		#User2 stepSequencer (Polymetric realtime)
 		self._polyseq = PolymetricSequencerComponent(self._matrix, self._side_buttons, self._nav_buttons, self._control_surface)
 		self._polyseq.set_osd(self._osd)
+
+		#User1 LoopingClipMode
+		self._looping_clip_mode = LoopingClipModeComponent(self._matrix, self._side_buttons, self._nav_buttons, self._control_surface)
+		self._looping_clip_mode.set_osd(self._osd)
 		
 		#User1 Instrument controller (Scale)
 		self._instrument_controller = InstrumentControllerComponent(self._matrix, self._side_buttons, self._nav_buttons, self._control_surface, self._note_repeat)
@@ -123,6 +128,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 
 		self._session = None
 		self._zooming = None
+		self._looping_clip_mode = None
 		for button in self._all_buttons:
 			button.set_on_off_values("DefaultButton.Disabled", "DefaultButton.Disabled")
 
@@ -220,6 +226,8 @@ class MainSelectorComponent(ModeSelectorComponent):
 			user2Mode = "StepSequencer2"
 		if user2Mode=="polymetric stepseq":
 			user2Mode = "PolymetricSequencer"
+		if user2Mode=="looping clip":
+			user2Mode = "LoopingClipMode"
 		return user2Mode
 		
 	def channel_for_current_mode(self):
@@ -239,7 +247,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 			elif self._sub_mode_list[self._main_mode_index] == 1:
 				new_channel = 3  # device controller
 			elif self._sub_mode_list[self._main_mode_index] == 2:
-				new_channel = 4  # plain user mode 1
+				new_channel = 10  # looping clip mode
 
 		elif self._main_mode_index == 2:
 			if self._sub_mode_list[self._main_mode_index] == 0:
@@ -280,6 +288,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 				self._setup_step_sequencer2(not as_active)
 				self._setup_polymetric_step_sequencer(not as_active)
 				self._setup_instrument_controller(not as_active)
+				self._setup_looping_clip_mode(not as_active)
 				self._setup_session(as_active, as_enabled)
 				self._update_control_channels()
 				self._mode_index = 0
@@ -297,6 +306,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 				self._setup_step_sequencer2(not as_active)
 				self._setup_polymetric_step_sequencer(not as_active)
 				self._setup_instrument_controller(not as_active)
+				self._setup_looping_clip_mode(not as_active)
 				self._setup_session(not as_active, as_enabled)
 				self._setup_mixer(as_active)
 				self._update_control_channels()
@@ -318,6 +328,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 			self._setup_polymetric_step_sequencer(not as_active)
 			self._setup_mixer(not as_active)
 			self._setup_device_controller(not as_active)
+			self._setup_looping_clip_mode(not as_active)
 			self._update_control_channels()
 			self._setup_instrument_controller(as_active)
 			self._mode_index = 4
@@ -377,9 +388,22 @@ class MainSelectorComponent(ModeSelectorComponent):
 			self._setup_polymetric_step_sequencer(not as_active)
 			self._setup_mixer(not as_active)
 			self._setup_instrument_controller(not as_active)
+			self._setup_looping_clip_mode(not as_active)
 			self._setup_device_controller(as_active)
 			self._update_control_channels()
 			self._mode_index = 5
+		elif mode == "looping clip":
+			self._control_surface.show_message("LOOPING CLIP MODE")
+			self._setup_session(not as_active, not as_enabled)
+			self._setup_instrument_controller(not as_active)
+			self._setup_device_controller(not as_active)
+			self._setup_step_sequencer(not as_active)
+			self._setup_step_sequencer2(not as_active)
+			self._setup_polymetric_step_sequencer(not as_active)
+			self._setup_mixer(not as_active)
+			self._setup_looping_clip_mode(as_active)
+			self._update_control_channels()
+			self._mode_index = 9
 		elif mode == "user 2":
 			self._control_surface.show_message("USER 2 MODE" )
 			self._setup_session(not as_active, not as_enabled)
@@ -520,6 +544,17 @@ class MainSelectorComponent(ModeSelectorComponent):
 			else:
 				self._device_controller._is_active = False
 				temp=self._device_controller.set_enabled(False)
+
+	def _setup_looping_clip_mode(self, as_active):
+		if self._looping_clip_mode is not None:
+			if as_active:
+				self._activate_scene_buttons(True)
+				self._activate_matrix(True)
+				self._activate_navigation_buttons(True)
+				self._config_button.send_value(32)
+				self._looping_clip_mode.set_enabled(True)
+			else:
+				self._looping_clip_mode.set_enabled(False)
 
 	def _setup_user_mode(self, release_matrix=True, release_side_buttons=True, release_nav_buttons=True, drum_rack_mode=True):
 		# user1 -> All True but release_nav_buttons / user2 -> All false 

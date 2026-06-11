@@ -21,7 +21,7 @@ class Settings():
     USER_MODES_1 = [
 		"instrument"
 		, "device"
-		# ,"user 1"
+		, "looping clip"
     ]
     USER_MODES_2 = [
 		"drum stepseq"

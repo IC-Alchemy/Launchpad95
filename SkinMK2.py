@@ -41,6 +41,10 @@ class Colors:
             On = Rgb.MINT
             Off = Rgb.MINT_THIRD
 
+        class LoopingClipMode:
+            On = Rgb.RED
+            Off = Rgb.RED_THIRD
+
         class User:
             On = Rgb.BLUE
             Off = Rgb.BLUE_THIRD
@@ -636,6 +640,18 @@ class Colors:
         SideOn = Rgb.PURPLE
         SideOff = Rgb.PURPLE_THIRD
         SideLength = Rgb.WHITE
+
+    class LoopingClipMode:
+        PadOff = Rgb.DARK_GREY
+        PadInLoop = Rgb.BLUE_THIRD
+        PadStart = Rgb.GREEN
+        PadEnd = Rgb.RED
+        Playing = Rgb.GREEN_PULSE
+        PadSelected = Rgb.AMBER_BLINK
+        TrackEmpty = Rgb.BLACK
+        class Toggle:
+            On = Rgb.LIGHT_BLUE
+            Off = Rgb.LIGHT_BLUE_THIRD
 
 
 
