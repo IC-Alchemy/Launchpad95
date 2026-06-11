@@ -19,6 +19,8 @@ class TrackLoopState:
         self.clip_slot = None
         self.loop_start = 0.0
         self.loop_end = 0.0
+        self.clip_start = 0.0
+        self.clip_end = 0.0
         self.playhead = None
         self.pending_start_step = None
         self.pending_end_step = None
@@ -162,9 +164,29 @@ class LoopingClipModeComponent(CompoundComponent):
             try:
                 state.loop_start = state.clip.loop_start
                 state.loop_end = state.clip.loop_end
+                state.clip_start = state.clip.start_marker
+                state.clip_end = state.clip.end_marker
             except RuntimeError:
                 state.loop_start = 0.0
                 state.loop_end = 0.0
+                state.clip_start = 0.0
+                state.clip_end = 0.0
+
+    def _clip_quant(self, state):
+        step_size = self._quantization_step_size
+        clip_length = state.clip_end - state.clip_start
+        if clip_length > 0:
+            return clip_length / step_size
+        return 0.25
+
+    def _step_to_beat(self, state, step):
+        return state.clip_start + step * self._clip_quant(state)
+
+    def _beat_to_step(self, state, beat):
+        quant = self._clip_quant(state)
+        if quant <= 0:
+            return 0
+        return int((beat - state.clip_start) / quant + 0.0001)
 
     def _add_clip_listeners(self, state):
         if state.clip is not None:
@@ -222,21 +244,20 @@ class LoopingClipModeComponent(CompoundComponent):
     def _set_clip_loop_range(self, state, start_step, end_step):
         if state.clip is None:
             return
-        step_size = self._quantization_step_size
-        quant = state.loop_end / step_size if state.loop_end > 0 else 0.25
-        beat_start = start_step * quant
-        beat_end = end_step * quant
+        pads = self._pads_per_track()
+        end_step = min(end_step, pads)
+        beat_start = self._step_to_beat(state, start_step)
+        if end_step >= pads:
+            beat_end = state.clip_end
+        else:
+            beat_end = self._step_to_beat(state, end_step)
         try:
             if beat_start >= state.clip.loop_end:
                 state.clip.loop_end = beat_end
                 state.clip.loop_start = beat_start
-                state.clip.end_marker = beat_end
-                state.clip.start_marker = beat_start
             else:
                 state.clip.loop_start = beat_start
                 state.clip.loop_end = beat_end
-                state.clip.start_marker = beat_start
-                state.clip.end_marker = beat_end
             state.loop_start = beat_start
             state.loop_end = beat_end
         except RuntimeError:
@@ -257,7 +278,7 @@ class LoopingClipModeComponent(CompoundComponent):
 
         if value > 0:
             if state.pending_end_step is not None:
-                state.pending_end_step = step
+                state.pending_end_step = step + 1
             else:
                 state.pending_start_step = step
                 state.pending_end_step = None
@@ -315,7 +336,6 @@ class LoopingClipModeComponent(CompoundComponent):
     def _render_grid(self):
         if self._matrix is None:
             return
-        step_size = self._quantization_step_size
 
         for x in xrange(8):
             for y in xrange(8):
@@ -324,7 +344,7 @@ class LoopingClipModeComponent(CompoundComponent):
         for i in xrange(self._track_count_for_mode()):
             state = self._track_states[i]
             pads = self._pads_per_track()
-            quant = state.loop_end / step_size if state.loop_end > 0 else 0.25
+            quant = self._clip_quant(state)
             if state.clip is None or quant <= 0:
                 for step in xrange(pads):
                     col, row = self._step_to_grid(step, i)
@@ -332,8 +352,8 @@ class LoopingClipModeComponent(CompoundComponent):
                         self._grid_back_buffer[col][row] = "LoopingClipMode.TrackEmpty"
                 continue
 
-            loop_start_step = int(state.loop_start / quant + 0.0001)
-            loop_end_step = int(state.loop_end / quant + 0.0001)
+            loop_start_step = self._beat_to_step(state, state.loop_start)
+            loop_end_step = self._beat_to_step(state, state.loop_end)
 
             for step in xrange(pads):
                 col, row = self._step_to_grid(step, i)
@@ -351,7 +371,7 @@ class LoopingClipModeComponent(CompoundComponent):
                 self._grid_back_buffer[col][row] = color
 
             if state.playhead is not None and quant > 0:
-                playhead_step = int(state.playhead / quant)
+                playhead_step = self._beat_to_step(state, state.playhead)
                 if 0 <= playhead_step < pads:
                     col, row = self._step_to_grid(playhead_step, i)
                     if row < 8:
