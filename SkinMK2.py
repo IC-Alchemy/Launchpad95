@@ -38,12 +38,12 @@ class Colors:
             Off = Rgb.AMBER_THIRD
 
         class PolymetricSequencer:
-            On = Rgb.MINT
-            Off = Rgb.MINT_THIRD
+            On = Rgb.CYAN
+            Off = Rgb.CYAN_THIRD
 
         class LoopingClipMode:
-            On = Rgb.RED
-            Off = Rgb.RED_THIRD
+            On = Rgb.VIOLET
+            Off = Rgb.VIOLET
 
         class User:
             On = Rgb.BLUE
@@ -614,42 +614,54 @@ class Colors:
         StepOff = Rgb.BLACK
         # Matching playhead pulses for the step palette.
         Playhead1 = Rgb.GREEN_PULSE
-    
+
         # Flashing edit target when a step needs explicit selection feedback.
         StepSelected = Rgb.WHITE_BLINK
 
-        # Gate and pitch page pads: active notes, repeated/dimmed notes, and off cells.
-        NoteOn = Rgb.PURPLE
-        NoteDim = Rgb.PURPLE_THIRD
+        # Gate page: warm amber/gold palette for rhythmic on/off steps.
+        # Pitch page: cyan/blue palette for melodic note selection.
+        NoteOn = Rgb.CYAN
+        NoteDim = Rgb.CYAN_THIRD
         NoteOff = Rgb.BLACK
 
         # Octave, velocity, and note-length value bars.
-        FaderOn = Rgb.BLUE
-        FaderDim = Rgb.BLUE_THIRD
+        # Each lane gets its own color identity so the performer instantly
+        # recognises which parameter is being edited.
+        FaderOn = Rgb.PINK
+        FaderDim = Rgb.PINK_THIRD
         FaderOff = Rgb.BLACK
 
         # Lane cycle-length picker: active range, exact selected length, and inactive range.
-        LengthOn = Rgb.GREEN_THIRD
-        LengthSelected = Rgb.BLUE_PULSE
+        LengthOn = Rgb.MINT_THIRD
+        LengthSelected = Rgb.CYAN_PULSE
         LengthOff = Rgb.BLACK
 
         # Bottom-row page markers when the playhead is not on that column.
-        PageMarker = Rgb.YELLOW
+        PageMarker = Rgb.GOLD
 
         # Side lane buttons; SideLength marks the lane currently in length-edit view.
-        SideOn = Rgb.PURPLE
-        SideOff = Rgb.PURPLE_THIRD
-        SideLength = Rgb.WHITE
+        SideOn = Rgb.LILAC
+        SideOff = Rgb.LILAC
+        SideLength = Rgb.CYAN
 
     class LoopingClipMode:
+        # Pads outside the active loop brace: dim but visible so the performer
+        # can see the full timeline extent before committing a new region.
         PadOff = Rgb.DARK_GREY
-        PadInLoop = Rgb.BLUE_THIRD
-        PadStart = Rgb.GREEN
-        PadEnd = Rgb.RED
-        Playing = Rgb.GREEN_PULSE
-        PadSelected = Rgb.AMBER_BLINK
+        # Loop body: a cool teal lane that clearly reads as "inside the brace".
+        PadInLoop = Rgb.VIOLET
+        # Loop start boundary — punchy green so you always know where it begins.
+        PadStart = Rgb.NEON_GREEN
+        # Loop end boundary — warm coral so the close of the brace is distinct.
+        PadEnd = Rgb.CORAL
+        # Playing: moving playhead cursor, soft green pulse differentiates from the loop.
+        Playing = Rgb.MINT_PULSE
+        # Pending start marker while building a two-pad loop selection.
+        PadSelected = Rgb.GOLD
+        # Tracks without a clip in this scene slot.
         TrackEmpty = Rgb.BLACK
         class Toggle:
+            # 4-track / 8-track mode toggle and bank/scene navigation buttons.
             On = Rgb.LIGHT_BLUE
             Off = Rgb.LIGHT_BLUE_THIRD
 
