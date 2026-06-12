@@ -1,4 +1,2 @@
-__pycache__
-.DS_Store
-/.idea/
-.kilo/*
+# Documentation
+DOCS/CLIP_LOOP_MODE_USER_MANUAL.md
