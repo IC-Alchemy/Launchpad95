@@ -1,4 +1,3 @@
-import time
 import Live
 
 from _Framework.ButtonElement import ButtonElement
@@ -13,8 +12,7 @@ except NameError:
     # in both the legacy environment and normal Python.
     xrange = range
 
-
-DOUBLE_PRESS_WINDOW = 0.25
+_Q = Live.Song.Quantization
 
 
 class TrackLoopState:
@@ -31,9 +29,8 @@ class TrackLoopState:
         self.clip_end = 0.0
         self.playhead = None
         self.pending_start_step = None
-        self.pending_end_step = None
-        self.last_pad_time = 0.0
-        self.last_pad_index = -1
+        self.pressed_steps = []
+        self.loop_gesture_active = False
 
 
 class LoopingClipModeComponent(CompoundComponent):
@@ -203,7 +200,8 @@ class LoopingClipModeComponent(CompoundComponent):
         state.clip_end = 0.0
         state.playhead = None
         state.pending_start_step = None
-        state.pending_end_step = None
+        state.pressed_steps = []
+        state.loop_gesture_active = False
 
     def _refresh_track_states(self):
         # Syncs all visible track lanes with Live's current Set state: grabs
@@ -251,6 +249,7 @@ class LoopingClipModeComponent(CompoundComponent):
                 state.clip = clip
                 state.playhead = None
                 if state.clip is not None:
+                    self._read_clip_bounds(state)
                     self._add_clip_listeners(state)
                     self._read_clip_loop(state)
                 else:
@@ -261,16 +260,25 @@ class LoopingClipModeComponent(CompoundComponent):
             elif state.clip is not None:
                 self._read_clip_loop(state)
 
+    def _read_clip_bounds(self, state):
+        # The grid slices against the clip's full marker span captured when the
+        # clip enters the mode. Loop edits should not keep shrinking this span.
+        if state.clip is not None:
+            try:
+                state.clip_start = state.clip.start_marker
+                state.clip_end = state.clip.end_marker
+            except RuntimeError:
+                state.clip_start = 0.0
+                state.clip_end = 0.0
+
     def _read_clip_loop(self, state):
-        # Reads a clip's loop-brace positions (loop_start, loop_end), its
-        # start/end markers, and the playhead if the clip is currently sounding.
-        # This is the single source of truth that keeps pads in sync with Live.
+        # Reads a clip's current loop brace and playhead state. The full clip
+        # marker span is tracked separately so loop edits never redefine what
+        # "the whole clip" means while the performer is in this mode.
         if state.clip is not None:
             try:
                 state.loop_start = state.clip.loop_start
                 state.loop_end = state.clip.loop_end
-                state.clip_start = state.clip.start_marker
-                state.clip_end = state.clip.end_marker
                 if state.clip.is_playing and self.song().is_playing:
                     state.playhead = state.clip.playing_position
                 else:
@@ -278,8 +286,6 @@ class LoopingClipModeComponent(CompoundComponent):
             except RuntimeError:
                 state.loop_start = 0.0
                 state.loop_end = 0.0
-                state.clip_start = 0.0
-                state.clip_end = 0.0
                 state.playhead = None
 
     def _clip_quant(self, state):
@@ -371,12 +377,12 @@ class LoopingClipModeComponent(CompoundComponent):
         self._on_playing_position_changed()
 
     def _clear_pending_steps(self):
-        # Abandons any half-entered loop range. The performer builds a loop by
-        # pressing two pads (start + end); if they change tracks or modes before
-        # the second pad, the pending selection is thrown away.
+        # Clears any held-pad gesture state. Loops are only committed while two
+        # pads are held at once on the same track lane.
         for state in self._track_states:
             state.pending_start_step = None
-            state.pending_end_step = None
+            state.pressed_steps = []
+            state.loop_gesture_active = False
 
     def _select_track_for_state(self, state):
         # Highlights the track in Live's Session View that corresponds to the
@@ -411,38 +417,11 @@ class LoopingClipModeComponent(CompoundComponent):
 
         return None
 
-    def _apply_midi_note_bounds(self, state, beat_start, beat_end):
-        # When the performer sets a loop range on a MIDI clip, this trims
-        # notes that extend past the end of the loop region and discards notes
-        # that fall entirely outside. Audio clips skip this step.
-        if state.clip is None:
-            return
-        try:
-            if not state.clip.is_midi_clip:
-                return
-            state.clip.select_all_notes()
-            note_cache = state.clip.get_selected_notes()
-            new_notes = []
-            for note in note_cache:
-                note_start = note[1]
-                note_duration = note[2]
-                if note_start < beat_start or note_start >= beat_end:
-                    continue
-                max_duration = beat_end - note_start
-                if max_duration <= 0:
-                    continue
-                trimmed_duration = min(note_duration, max_duration)
-                new_notes.append([note[0], note_start, trimmed_duration, note[3], note[4]])
-            state.clip.replace_selected_notes(tuple(new_notes))
-            state.clip.deselect_all_notes()
-        except RuntimeError:
-            pass
-
     def _set_clip_loop_range(self, state, start_step, end_step):
         # The core performance action: converts two pad presses (e.g. pad 2 and
-        # pad 6) into a loop region in the clip. Moves Live's loop brace and
-        # clip markers to those beat positions, trims MIDI notes if needed,
-        # and sets start_marker/end_marker so the clip plays only that phrase.
+        # pad 6) into a loop region in the clip. Moves only Live's loop brace,
+        # leaving clip markers and note content untouched so the full clip can
+        # always be restored by pressing the first and last pads together.
         if state.clip is None:
             return
 
@@ -462,6 +441,10 @@ class LoopingClipModeComponent(CompoundComponent):
             return
 
         try:
+            try:
+                state.clip.looping = True
+            except RuntimeError:
+                pass
             # Live can be picky about loop_start staying before loop_end, so
             # when we move the start past the current end we update end first.
             if beat_start >= state.clip.loop_end:
@@ -471,28 +454,83 @@ class LoopingClipModeComponent(CompoundComponent):
                 state.clip.loop_start = beat_start
                 state.clip.loop_end = beat_end
 
-            # Keep the clip markers aligned with the selected range so audio
-            # and MIDI clips both tighten to the same visible subsection.
-            if beat_start >= state.clip.end_marker:
-                state.clip.end_marker = beat_end
-                state.clip.start_marker = beat_start
-            else:
-                state.clip.start_marker = beat_start
-                state.clip.end_marker = beat_end
-
-            self._apply_midi_note_bounds(state, beat_start, beat_end)
             self._read_clip_loop(state)
         except RuntimeError:
             pass
 
+    def _step_is_in_loop(self, state, step):
+        pads = self._pads_per_track()
+        loop_start_step = max(0, min(self._beat_to_step(state, state.loop_start), pads - 1))
+        loop_end_step = max(loop_start_step + 1, min(self._beat_to_step(state, state.loop_end), pads))
+        if state.loop_end >= state.clip_end:
+            loop_end_step = pads
+        return step >= loop_start_step and step < loop_end_step
+
+    def _jump_to_step_and_play(self, state, step):
+        # A single pad tap is a transport gesture, not a loop edit. If the tap
+        # lands inside the current loop, jump playback to that slice and play.
+        if state.clip is None or state.clip_slot is None:
+            return
+        if not self._step_is_in_loop(state, step):
+            return
+
+        target_beat = self._step_to_beat(state, step)
+        try:
+            if state.clip.is_playing and self.song().is_playing:
+                current_beat = state.playhead if state.playhead is not None else state.loop_start
+                delta = target_beat - current_beat
+                if abs(delta) > 0.0001:
+                    state.clip.move_playing_pos(delta)
+            else:
+                state.clip_slot.fire(force_legato=True, launch_quantization=_Q.q_no_q)
+                delta = target_beat - state.loop_start
+                if abs(delta) > 0.0001:
+                    state.clip.move_playing_pos(delta)
+            self._read_clip_loop(state)
+        except (AttributeError, RuntimeError, TypeError):
+            pass
+
+    def _clear_other_pressed_steps(self, active_state):
+        for state in self._track_states:
+            if state != active_state and state.pressed_steps:
+                state.pending_start_step = None
+                state.pressed_steps = []
+                state.loop_gesture_active = False
+
+    def _handle_pad_press(self, state, step):
+        self._clear_other_pressed_steps(state)
+        if state.loop_gesture_active or step in state.pressed_steps:
+            return
+
+        state.pressed_steps.append(step)
+        if len(state.pressed_steps) == 1:
+            state.pending_start_step = step
+            return
+
+        start = min(state.pressed_steps[0], state.pressed_steps[1])
+        end = max(state.pressed_steps[0], state.pressed_steps[1]) + 1
+        self._set_clip_loop_range(state, start, end)
+        state.pending_start_step = None
+        state.loop_gesture_active = True
+
+    def _handle_pad_release(self, state, step):
+        single_tap = (not state.loop_gesture_active) and state.pressed_steps == [step]
+        if step in state.pressed_steps:
+            state.pressed_steps.remove(step)
+
+        if single_tap:
+            self._jump_to_step_and_play(state, step)
+
+        if not state.pressed_steps:
+            state.pending_start_step = None
+            state.loop_gesture_active = False
+
     def _matrix_value(self, value, x, y, is_momentary):
         # Called every time a pad on the 8x8 grid is pressed or released.
-        # Implements the two-pad loop-selection gesture:
-        #   1st press: marks the loop start.
-        #   2nd press on same pad within DOUBLE_PRESS_WINDOW: sets a 1-step loop.
-        #   2nd press on different pad: sets the loop range between the two pads.
-        # Releasing a momentary pad is ignored.
-        if not self.is_enabled() or self._matrix is None or (value == 0 and is_momentary):
+        # Holding two pads on the same track at once sets the loop range
+        # between them. Releasing a single tapped pad instead jumps playback
+        # to that slice if it falls inside the current loop.
+        if not self.is_enabled() or self._matrix is None:
             return
 
         track_index, step = self._grid_to_step(x, y)
@@ -507,34 +545,10 @@ class LoopingClipModeComponent(CompoundComponent):
             return
 
         self._select_track_for_state(state)
-
-        now = time.time()
-        if state.pending_start_step is None:
-            self._clear_pending_steps()
-            state.pending_start_step = step
-            state.last_pad_time = now
-            state.last_pad_index = step
-            self._force_update = True
-            self.update()
-            return
-
-        if state.pending_start_step == step:
-            if state.last_pad_index == step and (now - state.last_pad_time) <= DOUBLE_PRESS_WINDOW:
-                self._set_clip_loop_range(state, step, step + 1)
-                self._clear_pending_steps()
-            else:
-                state.last_pad_time = now
-                state.last_pad_index = step
-            self._force_update = True
-            self.update()
-            return
-
-        start = min(state.pending_start_step, step)
-        end = max(state.pending_start_step, step) + 1
-        self._set_clip_loop_range(state, start, end)
-        self._clear_pending_steps()
-        state.last_pad_time = now
-        state.last_pad_index = step
+        if value != 0 or not is_momentary:
+            self._handle_pad_press(state, step)
+        else:
+            self._handle_pad_release(state, step)
         self._force_update = True
         self.update()
 

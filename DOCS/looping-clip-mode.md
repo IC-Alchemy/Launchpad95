@@ -90,26 +90,21 @@ The length constraint is enforced when setting loop positions: the loop length `
 
 ## Interaction Model
 
-### Setting Loop Start
-Press a pad within a track's row(s). The pad's column position maps to a time offset within the clip:
+### Two-Pad Loop Selection
+Hold two pads within the same track's row(s) at the same time. Their positions map to time offsets within the clip:
 
 ```
 4-track:  offset = (column * 2 + sub_row) * (clip_loop_length / 16)
 8-track:  offset = column * (clip_loop_length / 8)
 ```
 
-Pressing a pad stores it as the **pending loop start**. The pad lights up in the "start selected" color.
+The first held pad is shown as the **pending loop start**. When the second pad is pressed while the first is still held, the loop range is set between the two pads. Holding the first and last pad together restores the full clip span.
 
 
-### Double-Press (Single-Pad Loop)
-A double-press (two presses of the **same** pad within 250ms) loops only that pad's segment:
+### Single-Pad Tap
+A single pad tap does not create a loop. Releasing a tapped pad inside the current loop jumps playback to that segment and plays from there.
 
-```
-4-track: loops 1/16 of the clip (single pad duration)
-8-track: loops 1/8 of the clip (single pad duration)
-```
-
-The loop range is set to `[pad_offset, pad_offset + segment_length]`.
+Taps outside the current loop do not change the loop range.
 
 ### Visual States
 
@@ -269,7 +264,7 @@ class Mode:
    - Constructor: register matrix listener, side button listeners, initialize track state
    - `set_enabled()`: enable/disable, register/deregister Live listeners
    - `update()`: poll clip states, render grid
-   - `_matrix_value()`: handle pad interactions (start/end/double-press)
+   - `_matrix_value()`: handle simultaneous two-pad loop selection and single-pad jump playback
    - `_toggle_track_mode()`: 4-track ↔ 8-track
    - `_render_grid()`: LED output with caching
    - `_set_clip_loop_range()`: quantized loop position update
