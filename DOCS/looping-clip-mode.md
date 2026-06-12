@@ -1,4 +1,4 @@
-# Technical Specification: Looping Clip Mode
+# Technical Specification: Looping Clip Mode Plan
 
 ## Overview
 
@@ -100,10 +100,6 @@ Press a pad within a track's row(s). The pad's column position maps to a time of
 
 Pressing a pad stores it as the **pending loop start**. The pad lights up in the "start selected" color.
 
-### Setting Loop End
-While the start pad is held, a second pad can be pressed to set the **loop end**. The range is set as `min(start, end)` to `max(start, end) + 1` (inclusive of the end pad).
-
-Upon release, the clip's `loop_start` / `loop_end` / `start_marker` / `end_marker` are updated to the quantized boundaries.
 
 ### Double-Press (Single-Pad Loop)
 A double-press (two presses of the **same** pad within 250ms) loops only that pad's segment:
@@ -193,29 +189,7 @@ A side button toggles the view between 4-track and 8-track configurations.
 
 ---
 
-## Component Structure
 
-```
-LoopingClipModeComponent (CompoundComponent)
-├── _track_states: list[TrackLoopState] (one per visible track)
-│   ├── track: Track reference from song().tracks
-│   ├── clip: Clip reference (audio or MIDI)
-│   ├── loop_start: float (beat time)
-│   ├── loop_end: float (beat time)
-│   └── playhead: float or None
-├── _matrix (ButtonMatrixElement, 8×8) — the Launchpad grid
-├── _top_buttons (tuple of 4 ButtonElements) — nav buttons
-├── _side_buttons (tuple of 8 ButtonElements) — function buttons
-├── _osd (M4LInterface) — on-screen display
-├── _is_4_track_mode: bool (True = 4-track, False = 8-track)
-├── _track_offset: int (index into song().tracks)
-├── _selected_scene_index: int
-├── _pending_start_track: int or None (track with pending start pad)
-├── _pending_start_column: int or None (column of pending start pad)
-├── _last_pad_press_time: float
-├── _last_pad_track: int or None
-├── _last_pad_column: int or None
-```
 
 ### Key Methods
 
@@ -237,9 +211,6 @@ _set_loop_range(track_index, start_step, end_step)
 
 _toggle_track_mode()
   → Switch between 4-track and 8-track, re-render
-
-_nudge_track_offset(delta)
-  → Shift the visible track window
 
 _refresh_track_states()
   → Re-read clip references for current track offset and scene

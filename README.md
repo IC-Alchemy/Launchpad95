@@ -45,16 +45,16 @@ See [PolymetricSequencerMode.md](PolymetricSequencerMode.md) for the full manual
 
 ## Looping Clip Mode
 
-A multi-track visual clip looper that uses the full 8x8 pad matrix. Set loop start and end points for up to 4 tracks simultaneously (16 pads each) or toggle to 8 tracks (8 pads each). Works with both audio and MIDI clips.
+A multi-track visual clip looper that uses the full 8x8 pad matrix. It works with both audio and MIDI clips and lets you jump the loop brace to equal slices across the selected scene's visible clips.
 
 Quick overview:
 
 - Enter it by pressing `User 1` three times (cycle through instrument → device → **looping clip**).
-- Default view shows 4 tracks from the current scene, each taking 2 rows of the grid (16 pads).
-- Press a pad to set the loop start point. Hold the start pad and press a second pad to set the loop end.
-- Double-press a pad within 250ms to loop just that single pad's segment (1/16 of the clip in 4-track, 1/8 in 8-track).
-- Side button 1 toggles between **4-track** (16 pads/track) and **8-track** (8 pads/track) layouts.
-- Track length is quantized to multiples of 16 steps in 4-track mode or 8 steps in 8-track mode.
+- Default view shows 4 tracks from the current scene, each taking 2 rows of the grid for 16 slices.
+- Side button 1 toggles between **4-track** (16 slices per track) and **8-track** (8 slices per track) layouts.
+- Press and release a pad to set the clip loop to that single slice.
+- Slice size is derived from the clip's `start_marker` → `end_marker` range.
+- The component currently edits `loop_start` and `loop_end` only; it does not rewrite MIDI notes.
 
 ### Grid Layout
 
@@ -91,14 +91,15 @@ Row 7 → Track 7
 | Button | Function |
 |--------|----------|
 | 1 | Toggle 4-track / 8-track mode |
-| 2 | Track bank navigation |
-| 3 | Quantization (reserved) |
+| 3 | Quantization placeholder (currently no action) |
 
-### Track Navigation
+### Scene And Track Following
 
-Top buttons 2 and 3 scroll the visible track window left and right. Scene changes follow Ableton Live's selected scene.
+The component follows Ableton Live's selected scene automatically.
+
+There is internal support for a track offset, but no track-bank button binding is currently wired in the looping component.
 
 ### Audio & MIDI Support
 
-Works with both audio and MIDI clips. The mode reads and writes `loop_start` / `loop_end` / `start_marker` / `end_marker` properties directly on the clip. For MIDI clips, notes outside the new loop range are preserved as-is.
+Works with both audio and MIDI clips. The mode reads `loop_start`, `loop_end`, `start_marker`, and `end_marker`, and writes `loop_start` / `loop_end`. MIDI note data is left unchanged.
 
